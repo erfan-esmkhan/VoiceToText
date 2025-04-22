@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تبدیل صوت به متن - هوشمند</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .recording-status {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: #4a5568;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #e53e3e;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(0.95); }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #startBtn {
+            background: #48bb78;
+            color: white;
+        }
+
+        #stopBtn {
+            background: #e53e3e;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>تبدیل صوت به متن پیشرفته 🎤</h1>
+        
+        <div class="recording-status">
+            <span>در حال ضبط...</span>
+            <div class="status-dot"></div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">
+                <i class="fas fa-microphone"></i>
+                شروع ضبط
+            </button>
+            <button id="stopBtn" disabled>
+                <i class="fas fa-stop"></i>
+                توقف ضبط
+            </button>
+        </div>
+
+        <div class="result-box">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+            <div id="resultText"></div>
+            
+        </div>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultText = document.getElementById('resultText');
+        const recordingStatus = document.querySelector('.recording-status');
+        const loading = document.querySelector('.loading');
+        
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (window.SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'fa-IR';
+
+            recognition.onstart = () => {
+                recordingStatus.style.display = 'flex';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                loading.style.display = 'flex';
+            };
+
+            recognition.onresult = (event) => {
+                loading.style.display = 'none';
+                const current = event.resultIndex;
+                const transcript = event.results[current][0].transcript;
+                
+                if(event.results[current].isFinal) {
+                    resultText.innerHTML += transcript + ' ';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('خطا در تشخیص گفتار:', event.error);
+                alert(`خطا: ${event.error}`);
+                resetUI();
+            };
+
+            recognition.onsoundend = () => {
+                resetUI();
+            };
+
+            startBtn.addEventListener('click', () => {
+                recognition.start();
+            });
+
+            stopBtn.addEventListener('click', () => {
+                recognition.stop();
+                resetUI();
+            });
+        } else {
+            alert('مرورگر شما از قابلیت تشخیص گفتار پشتیبانی نمیکند. لطفا از آخرین نسخه Chrome استفاده کنید.');
+        }
+
+        function resetUI() {
+            recordingStatus.style.display = 'none';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            loading.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
